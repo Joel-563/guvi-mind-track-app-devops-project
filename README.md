@@ -1,91 +1,97 @@
-DevOps Practice Project – Dist Directory
+# Brain Tasks App - DevOps Deployment Project
 
-This repository contains the production-ready build files (dist folder) for DevOps practice and deployment exercises.
+## Project Overview
 
-It is intentionally structured to help learners focus on CI/CD pipelines, hosting, containerization, and infrastructure setup rather than application development.
+This project is a DevOps deployment practice project for the Brain Tasks static frontend application. The application contains production-ready static files generated under the `dist` directory. The goal of this project is to containerize the application, test it locally using Docker and Nginx, and later deploy it to AWS EKS using CI/CD.
 
-📁 What This Repository Contains
+## Current Project Status
 
-dist/ – Compiled and production-ready static files
+Completed:
 
-HTML
+* Cloned the application repository
+* Verified that the application contains ready-to-deploy static files
+* Created a Dockerfile using the official Nginx Alpine image
+* Created a custom Nginx configuration
+* Served the static application from a custom directory inside the container
+* Configured Nginx to listen on port `3000`
+* Built the Docker image locally
+* Ran the Docker container locally
+* Verified the application in browser at `http://localhost:3000`
 
-CSS
+Pending:
 
-JavaScript
+* Push project code to GitHub
+* Create AWS ECR repository
+* Push Docker image to ECR
+* Create AWS EKS cluster
+* Write Kubernetes Deployment and Service YAML files
+* Deploy application to EKS
+* Configure CodeBuild and CodePipeline
+* Enable CloudWatch logging
+* Capture screenshots and LoadBalancer details
 
-Assets (images, fonts, etc.)
+## Application Structure
 
-These files are ready to deploy to:
+```text
+Brain-Tasks-App/
+├── dist/
+│   ├── index.html
+│   ├── vite.svg
+│   └── assets/
+│       ├── index-*.js
+│       └── index-*.css
+├── Dockerfile
+├── nginx.conf
+└── README.md
+```
 
-Web servers (Nginx / Apache)
+## Why Nginx Was Used
 
-Cloud platforms (AWS S3, Azure Blob, GCP Storage)
+The application contains static frontend files inside the `dist` directory. Since no backend server or build step is required at runtime, Nginx is used as a lightweight web server to serve the static HTML, CSS, and JavaScript files.
 
-Containerized environments (Docker + Nginx)
+## Docker Image Build
 
-Kubernetes clusters
+```bash
+docker build -t brain-task-app .
+```
 
-CI/CD pipeline demonstrations
+## Run Container Locally
 
-🎯 Purpose of This Repository
+```bash
+docker run -d -p 3000:3000 --name brain-task brain-task-app
+```
 
-This repository is designed for:
+## Verify Running Container
 
-DevOps beginners
+```bash
+docker ps
+```
 
-CI/CD practice
+## View Container Logs
 
-Deployment pipeline testing
+```bash
+docker logs brain-task
+```
 
-Docker & Kubernetes deployment exercises
+## Access Application
 
-Web server configuration practice
+```text
+http://localhost:3000
+```
 
-Reverse proxy and load balancer setup
+## Nginx Configuration Summary
 
-The goal is to simulate real-world deployment scenarios using already built application files.
+The custom Nginx configuration listens on port `3000`, serves files from `/web/data`, and uses `try_files` to return `index.html` for frontend routes.
 
-❓ Why is there NO package.json?
+## Docker Concepts Learned
 
-You may notice that this repository does not include:
+* Difference between Docker image and container
+* Difference between `docker stop`, `docker rm`, and `docker rmi`
+* Port mapping using `-p HOST_PORT:CONTAINER_PORT`
+* Why `EXPOSE` documents a port but does not publish it
+* How Nginx serves static files from a root directory
+* Why files inside `/etc/nginx/conf.d/` should contain a `server` block, not an `http` block
 
-package.json
+## Next Step
 
-node_modules
-
-Source code (src/)
-
-Build tools configuration
-
-✅ Reason:
-
-This repository only contains the final production build output (dist), not the development source code.
-
-In a typical project:
-
-Developers write source code.
-
-The project is built using tools like:
-
-Node.js
-
-Webpack
-
-Vite
-
-React (or other frameworks)
-
-A dist/ folder is generated.
-
-Only the production build is deployed to servers.
-
-This repository represents step 4 only.
-
-Since this is already the compiled output:
-
-No dependencies are required
-
-No build process is required
-
-No package.json is needed
+The next step is to push this codebase to GitHub and then create an AWS ECR repository for storing the Docker image.

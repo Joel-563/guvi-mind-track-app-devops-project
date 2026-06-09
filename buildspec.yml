@@ -1,0 +1,31 @@
+# version: 0.2
+# phases:
+#   pre_build:
+#     commands:
+#       - echo "logging in to docker hub"
+#       - echo "$DOCKER_TOKEN" | docker login -u "$DOCKER_USERNAME" --password-stdin
+#       - commit_hash=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+#       - IMAGE_TAG=$commit_hash
+#       - version="latest"
+#       - IMAGE_URI_UNIQUE="$DOCKER_USERNAME/$IMAGE_NAME:$IMAGE_TAG-$version"
+#       - IMAGE_URI_READABLE="$DOCKER_USERNAME/$IMAGE_NAME:$version"
+#   build:
+#     commands:
+#       - echo "building the docker image"
+#       - docker build -t $IMAGE_URI_UNIQUE .
+#   post_build:
+#     commands:
+#       - echo "pushing the docker image to docker hub"
+#       - docker tag $IMAGE_URI_UNIQUE $IMAGE_URI_READABLE
+#       - docker push $IMAGE_URI_UNIQUE
+#       - docker push $IMAGE_URI_READABLE
+
+
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - echo "Checking Docker"
+      - docker version
+      - docker info

@@ -20,7 +20,7 @@ phases:
       - docker push $IMAGE_URI_UNIQUE
       - docker push $IMAGE_URI_READABLE
       - aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER_NAME
-      - kubectl config current-context
+      - kubectl config use-context $EKS_CLUSTER_NAME
       - kubectl apply -f deployment.yaml
       - kubectl apply -f service.yaml
       - kubectl rollout restart deployment/brain-tasks-app -n test

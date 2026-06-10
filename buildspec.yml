@@ -21,13 +21,13 @@ phases:
       - docker push $IMAGE_URI_READABLE
       - aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER_NAME --alias $EKS_CLUSTER_NAME --kubeconfig /temp/kubeconfig
       - kubectl --kubeconfig /temp/kubeconfig config use-context $EKS_CLUSTER_NAME
-      - kubectl apply -f deployment.yaml
-      - kubectl apply -f service.yaml
-      - kubectl rollout restart deployment/brain-tasks-app -n test
+      - kubectl --kubeconfig /temp/kubeconfig apply -f deployment.yaml
+      - kubectl --kubeconfig /temp/kubeconfig apply -f service.yaml
+      - kubectl --kubeconfig /temp/kubeconfig rollout restart deployment/brain-tasks-app -n $K8S_NAMESPACE
       - echo "waiting for LoadBalancer to be ready"
       - |
         for i in {1..30}; do
-          LB_DNS=$(kubectl get svc brain-tasks-app-service -n $K8S_NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          LB_DNS=$(kubectl --kubeconfig /temp/kubeconfig get svc brain-tasks-app-service -n $K8S_NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           if [ -n "$LB_DNS" ]; then
             echo "Application URL: http://$LB_DNS:3000"
             break

@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: brain-tasks-app
+  namespace: test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: brain-tasks-app
+  template:
+    metadata:
+      labels:
+        app: brain-tasks-app
+    spec:
+      containers:
+      - name: brain-tasks-app
+        image: joelrobinson791/brain-task-app:latest
+        ports:
+        - containerPort: 3000
+      # tolerations:
+      # - key: dedicated
+      #   operator: Equal
+      #   value: test
+      #   effect: NoSchedule
+      # nodeSelector:
+      #   dedicated: test

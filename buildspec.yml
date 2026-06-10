@@ -24,7 +24,8 @@ phases:
       - kubectl apply -f service.yaml
       - kubectl rollout restart deployment/brain-tasks-app -n test
       - echo "waiting for LoadBalancer to be ready"
-      - for i in {1..30}; do
+      - |
+        for i in {1..30}; do
           LB_DNS=$(kubectl get svc brain-tasks-app-service -n $K8S_NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           if [ -n "$LB_DNS" ]; then
             echo "Application URL: http://$LB_DNS:3000"

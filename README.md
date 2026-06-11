@@ -1,6 +1,6 @@
 # Brain Tasks App - Production Deployment Walkthrough
 
-This repository contains the deployment setup for the **Brain Tasks** React application. The application was containerized with Docker, pushed to Docker Hub, deployed to AWS EKS through a CI/CD flow, exposed through a Kubernetes `LoadBalancer` service on port `3000`, and monitored using Amazon CloudWatch.
+This repository contains the deployment setup for the **Brain Tasks** React application. The application was containerized with Docker, pushed to Docker Hub, deployed to AWS EKS through AWS CodePipeline and CodeBuild, exposed through a Kubernetes `LoadBalancer` service on port `3000`, and monitored using Amazon CloudWatch.
 
 ## Deployment Summary
 
@@ -11,13 +11,14 @@ This repository contains the deployment setup for the **Brain Tasks** React appl
 | Original application source | `https://github.com/Vennilavanguvi/Brain-Tasks-App.git`                                             |
 | Application port            | `3000`                                                                                              |
 | Container image             | `joelrobinson791/brain-task-app:latest`                                                             |
+| CodePipeline pipeline       | `brain-task-app-codepipeline`                                                                       |
+| CodeBuild project           | `brain-task-app-codebuild`                                                                          |
 | Kubernetes namespace        | `test`                                                                                              |
 | EKS cluster                 | `brain-task-app-cluster`                                                                            |
 | Kubernetes deployment       | `brain-tasks-app`                                                                                   |
 | Kubernetes service          | `brain-tasks-app-service`                                                                           |
 | Service type                | `LoadBalancer`                                                                                      |
-| LoadBalancer DNS            | `a024fa4dff4864cd1891b3daa54b41d0-171315576.us-east-1.elb.amazonaws.com:3000`                       |
-| LoadBalancer ARN            | `arn:aws:elasticloadbalancing:us-east-1:097096558664:loadbalancer/a024fa4dff4864cd1891b3daa54b41d0` |
+| Latest LoadBalancer DNS     | `ac094f59c9bfa483d82f6074da3c000c-63461637.us-east-1.elb.amazonaws.com:3000`                        |
 | CloudWatch log group        | `/aws/codebuild/brain-task-app-guvi`                                                                |
 
 ## Architecture
@@ -26,12 +27,19 @@ This repository contains the deployment setup for the **Brain Tasks** React appl
 GitHub Repository
       |
       v
-AWS CodePipeline / CodeBuild
+AWS CodePipeline Source Stage
+      |
+      |-- GitHub App connection
+      |-- Push webhook on main branch
+      v
+AWS CodeBuild Build Stage
       |
       |-- Docker login
       |-- Docker image build
       |-- Docker image push to Docker Hub
-      |-- EKS kubeconfig update
+      v
+AWS CodePipeline EKS Deploy Stage
+      |
       |-- kubectl apply deployment.yaml
       |-- kubectl apply service.yaml
       v
@@ -144,7 +152,7 @@ The CI/CD build also creates a commit-based image tag and a readable `latest` ta
 
 ## 4. CodeBuild Setup
 
-AWS CodeBuild was configured to build the Docker image, push it to Docker Hub, and deploy the application to EKS using `kubectl`.
+AWS CodeBuild was configured to build the Docker image and push it to Docker Hub. The EKS deployment is handled by the AWS CodePipeline deploy stage.
 
 ### Required Environment Variables
 
@@ -175,9 +183,7 @@ The `buildspec.yml` file performs these actions:
 2. Creates a unique Docker image tag from the commit hash.
 3. Builds the Docker image.
 4. Pushes both the unique tag and the `latest` tag to Docker Hub.
-5. Updates kubeconfig for the EKS cluster.
-6. Applies the Kubernetes deployment and service files.
-7. Waits for the LoadBalancer DNS name.
+5. Leaves deployment to the CodePipeline EKS deploy stage.
 
 Initial Docker validation in CodeBuild:
 
@@ -303,7 +309,39 @@ kubectl get svc brain-tasks-app-service -n test
 
 ## 7. CodePipeline / CI-CD Deployment
 
-The pipeline uses GitHub as the source and AWS CodeBuild as the build/deploy stage.
+The pipeline uses GitHub as the source, AWS CodeBuild as the build stage, and Amazon EKS as the deploy stage.
+
+### Pipeline Configuration
+
+| Stage  | Provider                  | Main configuration                                                                 |
+| ------ | ------------------------- | ---------------------------------------------------------------------------------- |
+| Source | GitHub via GitHub App     | Repository `Joel-563/guvi-mind-track-app-devops-project`, branch `main`            |
+| Build  | AWS CodeBuild             | Project `brain-task-app-codebuild`, input artifact `SourceArtifact`                |
+| Deploy | Amazon EKS with `kubectl` | Region `us-east-1`, cluster `brain-task-app-cluster`, manifests from source output |
+
+The source stage was connected to GitHub using an AWS CodeConnections GitHub App connection.
+
+<p>
+  <img src="screenshots/Screenshot%202026-06-11%20112409.png" alt="CodePipeline source stage configured with GitHub App connection" width="900">
+</p>
+
+Webhook events were enabled so that pushes to the `main` branch start the pipeline automatically.
+
+<p>
+  <img src="screenshots/Screenshot%202026-06-11%20112415.png" alt="CodePipeline webhook push filter for main branch" width="900">
+</p>
+
+The build stage uses the existing CodeBuild project.
+
+<p>
+  <img src="screenshots/Screenshot%202026-06-11%20114148.png" alt="CodePipeline build stage configured with CodeBuild project" width="900">
+</p>
+
+The deploy stage uses the Amazon EKS deploy provider with `kubectl` manifest deployment.
+
+<p>
+  <img src="screenshots/Screenshot%202026-06-11%20115830.png" alt="CodePipeline deploy stage configured for Amazon EKS kubectl deployment" width="900">
+</p>
 
 CI/CD execution flow:
 
@@ -311,14 +349,46 @@ CI/CD execution flow:
 2. CodeBuild starts and reads `buildspec.yml`.
 3. CodeBuild builds the Docker image.
 4. Docker image is pushed to Docker Hub.
-5. CodeBuild connects to EKS using `aws eks update-kubeconfig`.
+5. CodePipeline passes the source artifact to the Amazon EKS deploy action.
 6. Kubernetes manifests are applied using `kubectl`.
 7. Kubernetes creates or updates the application pods and LoadBalancer service.
 
-Successful Kubernetes deployment from CodeBuild:
+### Pipeline Execution Output
+
+An initial pipeline execution reached Source and Build successfully, then failed at Deploy because the CodePipeline service role did not yet have EKS cluster access.
 
 <p>
-  <img src="screenshots/Screenshot%202026-06-10%20180205.png" alt="CodeBuild deploys application to EKS and prints LoadBalancer URL" width="900">
+  <img src="screenshots/Screenshot%202026-06-11%20130115.png" alt="CodePipeline execution failed at EKS deploy stage" width="900">
+</p>
+
+The error showed that the deploy action could not download the Kubernetes OpenAPI schema because the EKS cluster asked the action role for credentials.
+
+<p>
+  <img src="screenshots/Screenshot%202026-06-11%20130129.png" alt="CodePipeline EKS deploy credential error output" width="900">
+</p>
+
+The CodePipeline service role was then added as an EKS access entry.
+
+<p>
+  <img src="screenshots/Screenshot%202026-06-11%20130136.png" alt="EKS access entry created for CodePipeline service role" width="900">
+</p>
+
+After the access entry was created, all three stages completed successfully: Source, Build, and Deploy.
+
+<p>
+  <img src="screenshots/Screenshot%202026-06-11%20131459.png" alt="Successful CodePipeline Source Build Deploy stages" width="900">
+</p>
+
+The executions tab shows the successful execution ID `73e39f8f` after the earlier failed run.
+
+<p>
+  <img src="screenshots/Screenshot%202026-06-11%20131524.png" alt="CodePipeline executions list with successful run" width="900">
+</p>
+
+Kubernetes verification after the successful pipeline run:
+
+<p>
+  <img src="screenshots/Screenshot%202026-06-11%20131629.png" alt="kubectl output showing running pods and LoadBalancer service" width="900">
 </p>
 
 ## 8. Application Verification
@@ -328,7 +398,7 @@ After deployment, the Kubernetes LoadBalancer exposed the application on port `3
 Application URL:
 
 ```text
-http://a024fa4dff4864cd1891b3daa54b41d0-171315576.us-east-1.elb.amazonaws.com:3000
+http://ac094f59c9bfa483d82f6074da3c000c-63461637.us-east-1.elb.amazonaws.com:3000
 ```
 
 The application was successfully opened in the browser through the AWS LoadBalancer.
@@ -432,6 +502,20 @@ aws eks update-kubeconfig \
 kubectl --kubeconfig /temp/kubeconfig apply -f deployment.yaml
 kubectl --kubeconfig /temp/kubeconfig apply -f service.yaml
 ```
+
+### CodePipeline EKS Deploy Role Could Not Access Cluster
+
+The first CodePipeline deploy run failed after the Source and Build stages succeeded. The deploy action could not access the EKS cluster with the CodePipeline service role.
+
+<p>
+  <img src="screenshots/Screenshot%202026-06-11%20130555.png" alt="CodePipeline deploy role forbidden error during rollout status" width="900">
+</p>
+
+Fix:
+
+- Added the CodePipeline service role as an EKS access entry.
+- Reran the pipeline after the access entry was created.
+- Confirmed the Source, Build, and Deploy stages completed successfully.
 
 ## Final Result
 

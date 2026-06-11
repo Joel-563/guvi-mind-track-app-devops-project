@@ -19,22 +19,22 @@ phases:
       - docker tag $IMAGE_URI_UNIQUE $IMAGE_URI_READABLE
       - docker push $IMAGE_URI_UNIQUE
       - docker push $IMAGE_URI_READABLE
-      - aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER_NAME --alias $EKS_CLUSTER_NAME --kubeconfig /temp/kubeconfig
-      - kubectl --kubeconfig /temp/kubeconfig config use-context $EKS_CLUSTER_NAME
-      - kubectl --kubeconfig /temp/kubeconfig apply -f deployment.yaml
-      - kubectl --kubeconfig /temp/kubeconfig apply -f service.yaml
-      - kubectl --kubeconfig /temp/kubeconfig rollout restart deployment/brain-tasks-app -n $K8S_NAMESPACE
-      - echo "waiting for LoadBalancer to be ready"
-      - |
-        for i in {1..30}; do
-          LB_DNS=$(kubectl --kubeconfig /temp/kubeconfig get svc brain-tasks-app-service -n $K8S_NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-          if [ -n "$LB_DNS" ]; then
-            echo "Application URL: http://$LB_DNS:3000"
-            break
-          fi
-          echo "Waiting for LoadBalancer..."
-          sleep 10
-        done
+      # - aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER_NAME --alias $EKS_CLUSTER_NAME --kubeconfig /temp/kubeconfig
+      # - kubectl --kubeconfig /temp/kubeconfig config use-context $EKS_CLUSTER_NAME
+      # - kubectl --kubeconfig /temp/kubeconfig apply -f deployment.yaml
+      # - kubectl --kubeconfig /temp/kubeconfig apply -f service.yaml
+      # - kubectl --kubeconfig /temp/kubeconfig rollout restart deployment/brain-tasks-app -n $K8S_NAMESPACE
+      # - echo "waiting for LoadBalancer to be ready"
+      # - |
+      #   for i in {1..30}; do
+      #     LB_DNS=$(kubectl --kubeconfig /temp/kubeconfig get svc brain-tasks-app-service -n $K8S_NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+      #     if [ -n "$LB_DNS" ]; then
+      #       echo "Application URL: http://$LB_DNS:3000"
+      #       break
+      #     fi
+      #     echo "Waiting for LoadBalancer..."
+      #     sleep 10
+      #   done
 
 
 # version: 0.2
